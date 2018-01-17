@@ -1,0 +1,18 @@
+---
+  timezone: 'America/Vancouver'
+  start_hour: 16
+  end_hour: 12
+  bridge_ip: 192.168.1.31
+  bridge_user: SomeLongString-FromYourHueBridge
+  light: 4
+  color_switch_delay: 3
+  ical_url: https://recollect.net/api/some-long-url-of-your-ical-feed
+  override:
+      blue:
+          hue: 246
+          sat: 1
+          bri: 0.5
+      compost:
+          hue: 116
+          sat: 1
+          bri: 0.37
