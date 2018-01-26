@@ -12,10 +12,22 @@ use Getopt::Long;
 my %opts;
 GetOptions(\%opts,
     'light-test', # test mode, will toggle the lights regardless of day
+    'breathe',
 );
 
 # Load our config file
 my $Cfg = LoadConfig();
+my $UA = LWP::UserAgent->new;
+
+my $bridge_ip  = cfg_val('bridge_ip');
+my $username   = cfg_val('bridge_user');
+my $light      = cfg_val('light');
+my $Lights_URL = "http://$bridge_ip/api/$username/lights/$light/state";
+
+if ($opts{breathe}) {
+    light_breathe();
+    exit 0;
+}
 
 while (1) {
     # Check for collection day, and turn on lights if necessary until it's
@@ -124,12 +136,7 @@ sub alert_event_until {
     # light off!  The time interval can be changed in your config file.
     my $color_count = @colors;
     my $i = 0;
-    my $ua = LWP::UserAgent->new;
     my $color_switch_delay = cfg_val('color_switch_delay');
-    my $bridge_ip  = cfg_val('bridge_ip');
-    my $username   = cfg_val('bridge_user');
-    my $light      = cfg_val('light');
-    my $url = "http://$bridge_ip/api/$username/lights/$light/state";
     while (DateTime->now < $end_time) {
         my $c = $colors[$i++ % $color_count];
 
@@ -137,13 +144,14 @@ sub alert_event_until {
             hue => int($c->{hue} / 360 * 65534),
             sat => int($c->{sat} * 254),
             bri => int($c->{bri} * 254),
+            transitiontime => 2,
         );
 
         # Tell the Hue bulb to switch to the new color.
         my $color_json = JSON->new->encode(\%data);
-        say "Requesting PUT $url: $color_json";
-        my $resp = $ua->put(
-            $url,
+        say "Requesting PUT $Lights_URL $color_json";
+        my $resp = $UA->put(
+            $Lights_URL,
             Content => $color_json,
         );
         say $resp->status_line;
@@ -153,7 +161,11 @@ sub alert_event_until {
     }
 
     # Finally turn off the light
-    $ua->put( $url => Content => JSON->new->encode({ on => 0 }) );
+    $UA->put( $Lights_URL => Content => JSON->new->encode({ on => 0 }) );
+}
+
+sub light_breathe {
+    $UA->put( $Lights_URL => Content => JSON->new->encode({ alert => 'lselect' }) );
 }
 
 # Load the config file from the first place we find it.
@@ -194,8 +206,7 @@ sub LoadEvents {
     }
 
     # Now fetch the JSON content of upcoming events
-    my $ua = LWP::UserAgent->new;
-    my $resp = $ua->get($url);
+    my $resp = $UA->get($url);
     unless ($resp->is_success) {
         die "Couldn't fetch feed ($url): " . $resp->status_line;
     }
