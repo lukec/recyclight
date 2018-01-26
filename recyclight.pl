@@ -7,6 +7,12 @@ use JSON;
 use DateTime;
 use Graphics::Color::RGB;
 use YAML qw/LoadFile/;
+use Getopt::Long;
+
+my %opts;
+GetOptions(\%opts,
+    'light-test', # test mode, will toggle the lights regardless of day
+);
 
 # Load our config file
 my $Cfg = LoadConfig();
@@ -39,6 +45,11 @@ sub Recyclight {
     # about.  Each event may have multiple "flags" such as garbage or
     # recycling.
     for my $evt (@{ $events->{events} }) {
+        unless ($evt->{flags} and @{ $evt->{flags} }) {
+            say "Skipping event on $evt->{day} - no event flags";
+            next;
+        }
+
         my $ymd = $evt->{day};
         my ($y, $m, $d) = split '-', $ymd;
         my $evt_dt = DateTime->new(
@@ -52,7 +63,13 @@ sub Recyclight {
         say "Event on $ymd should alert from $alert_start to $alert_end";
 
         # Check if it's time for us to start turning the lights on
-        if ($alert_start < $now and $alert_end > $now) {
+        if ($opts{'light-test'} or ($alert_start < $now and $alert_end > $now)) {
+
+            # Testing mode
+            if ($opts{'light-test'}) {
+                $alert_end = $now->clone->add(days => 1);
+            }
+
             say "#### It's time to alert on $ymd ###";
             alert_event_until($evt, $alert_end);
             last;
@@ -66,6 +83,7 @@ sub Recyclight {
 sub alert_event_until {
     my $evt = shift;
     my $end_time = shift;
+
 
     # First, lets figure out what colors to show.  Usually ReCollect will
     # provide colors for each event flag.  It is possible to override these
