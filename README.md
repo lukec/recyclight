@@ -41,6 +41,9 @@ Place your file in `~/.recyclight.yaml`, `/etc/recyclight.yaml` or in another lo
 
 The `cpanfile` lists the dependencies.  The `cpanm` tool can make installing dependencies very easy. Check it out.
 
+> `sudo apt-get install cpanminus`
+> `cpanm --sudo --installdeps .`
+
 3. Try it out!
 
 Try running the script.  The output is fairly verbose.  For testing purposes it can help to use different ical feeds, based on different addresses that may or may not have collection in progress.
