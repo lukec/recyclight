@@ -49,6 +49,8 @@ if ($opts{breathe}) {
     exit 0;
 }
 
+Show_boot_sequence();
+
 while (1) {
     # Check for collection day, and turn on lights if necessary until it's
     # time to rest again.
@@ -159,29 +161,14 @@ sub alert_event_until {
     my $color_switch_delay = cfg_val('color_switch_delay');
     while (DateTime->now < $end_time) {
         my $c = $colors[$i++ % $color_count];
-
-        my %data = (
-            hue => int($c->{hue} / 360 * 65534),
-            sat => int($c->{sat} * 254),
-            bri => int($c->{bri} * 254),
-            transitiontime => 2,
-        );
-
-        # Tell the Hue bulb to switch to the new color.
-        my $color_json = JSON->new->encode(\%data);
-        say "Requesting PUT $Lights_URL $color_json";
-        my $resp = $UA->put(
-            $Lights_URL,
-            Content => $color_json,
-        );
-        say $resp->status_line;
+	show_color($c);
 
         # Now sleep for a bit
         sleep $color_switch_delay;
     }
 
     # Finally turn off the light
-    $UA->put( $Lights_URL => Content => JSON->new->encode({ on => 0 }) );
+    turn_off_light();
 }
 
 sub light_breathe {
@@ -234,3 +221,44 @@ sub LoadEvents {
     return JSON->new->utf8(1)->decode($raw_json);
 }
 
+
+# Turn the lights on in a simple boot sequence to know that the system is working
+# when this script runs.
+sub Show_boot_sequence {
+    my @colors = ("FF0000", "00FF00", "0000FF");
+    for my $c (@colors) {
+	say "  +=> Boot sequence: $c";
+        my $hsl = Graphics::Color::RGB->from_hex_string($c)->to_hsl;
+        my $c = {
+            hue  => $hsl->hue,
+            sat  => $hsl->saturation,
+            bri  => $hsl->lightness,
+        };
+	show_color($c);
+	sleep 2;
+    }
+}
+
+sub show_color {
+    my $c = shift;
+
+    my %data = (
+	hue => int($c->{hue} / 360 * 65534),
+	sat => int($c->{sat} * 254),
+	bri => int($c->{bri} * 254),
+	transitiontime => 2,
+    );
+
+    # Tell the Hue bulb to switch to the new color.
+    my $color_json = JSON->new->encode(\%data);
+    say "Requesting PUT $Lights_URL $color_json";
+    my $resp = $UA->put(
+	$Lights_URL,
+	Content => $color_json,
+    );
+    say $resp->status_line;
+}
+
+sub turn_off_light {
+    $UA->put( $Lights_URL => Content => JSON->new->encode({ on => 0 }) );
+}
