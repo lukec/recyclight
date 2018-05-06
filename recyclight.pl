@@ -8,12 +8,32 @@ use DateTime;
 use Graphics::Color::RGB;
 use YAML qw/LoadFile/;
 use Getopt::Long;
+use Lazy::Lockfile;
 
 my %opts;
 GetOptions(\%opts,
     'light-test', # test mode, will toggle the lights regardless of day
     'breathe',
-);
+) or usage();
+
+sub usage {
+    die <<EOT;
+USAGE: $0 [--light-test] [--breathe]
+
+    Reads a config file from \$RECYCLIGHT_CONFIG_FILE or ~/.recyclight.yaml or /etc/recyclight.yaml
+
+    --light-test   will start changing the lights as if it was your collection day
+    --breathe 	   will pulsate the light in a breathing pattern. Useful for debugging.
+
+EOT
+}
+
+ 
+my $lockfile = Lazy::Lockfile->new();
+unless ($lockfile) {
+    say "Couldn't get lock file. Exiting.";
+    exit -1;
+}
 
 # Load our config file
 my $Cfg = LoadConfig();
