@@ -10,10 +10,13 @@ use YAML qw/LoadFile/;
 use Getopt::Long;
 use Lazy::Lockfile;
 
+$| = 1; # turn on autoflush for quicker logging
+
 my %opts;
 GetOptions(\%opts,
     'light-test', # test mode, will toggle the lights regardless of day
     'breathe',
+    'test-hsl=s',
 ) or usage();
 
 sub usage {
@@ -22,8 +25,9 @@ USAGE: $0 [--light-test] [--breathe]
 
     Reads a config file from \$RECYCLIGHT_CONFIG_FILE or ~/.recyclight.yaml or /etc/recyclight.yaml
 
-    --light-test   will start changing the lights as if it was your collection day
-    --breathe 	   will pulsate the light in a breathing pattern. Useful for debugging.
+    --light-test   	will start changing the lights as if it was your collection day
+    --breathe 	   	will pulsate the light in a breathing pattern. Useful for debugging.
+    --test-hsl=H,S,L	will set the light to the given HSL (for testing)
 
 EOT
 }
@@ -46,6 +50,11 @@ my $Lights_URL = "http://$bridge_ip/api/$username/lights/$light/state";
 
 if ($opts{breathe}) {
     light_breathe();
+    exit 0;
+}
+
+if (my $hsl = $opts{'test-hsl'}) {
+    set_hsl($hsl);
     exit 0;
 }
 
@@ -172,8 +181,22 @@ sub alert_event_until {
 }
 
 sub light_breathe {
-    $UA->put( $Lights_URL => Content => JSON->new->encode({ alert => 'lselect' }) );
+    reset_light();
+    while (1) {
+	print "Breathing ...\n";
+        $UA->put( $Lights_URL => Content => JSON->new->encode({ alert => 'lselect' }) );
+	sleep 1;
+    }
 }
+
+sub set_hsl {
+    reset_light();
+    my $hsl = shift;
+    my ($h, $s, $b) = split ',', $hsl;
+    print "Setting to hue=$h sat=$s lum=$b\n";
+    show_color({hue => $h, sat => $s, bri => $b});
+}
+
 
 # Load the config file from the first place we find it.
 sub LoadConfig {
@@ -225,6 +248,7 @@ sub LoadEvents {
 # Turn the lights on in a simple boot sequence to know that the system is working
 # when this script runs.
 sub Show_boot_sequence {
+    reset_light();
     my @colors = ("FF0000", "00FF00", "0000FF");
     for my $c (@colors) {
 	say "  +=> Boot sequence: $c";
@@ -232,7 +256,7 @@ sub Show_boot_sequence {
         my $c = {
             hue  => $hsl->hue,
             sat  => $hsl->saturation,
-            bri  => $hsl->lightness,
+            bri  => 254,
         };
 	show_color($c);
 	sleep 2;
@@ -261,4 +285,9 @@ sub show_color {
 
 sub turn_off_light {
     $UA->put( $Lights_URL => Content => JSON->new->encode({ on => 0 }) );
+    reset_light();
+}
+
+sub reset_light {
+    $UA->put( $Lights_URL => Content => JSON->new->encode({ alert => 'none' }) );
 }
