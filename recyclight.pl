@@ -17,6 +17,7 @@ GetOptions(\%opts,
     'light-test', # test mode, will toggle the lights regardless of day
     'breathe',
     'test-hsl=s',
+    'turn-off',
 ) or usage();
 
 sub usage {
@@ -28,6 +29,7 @@ USAGE: $0 [--light-test] [--breathe]
     --light-test   	will start changing the lights as if it was your collection day
     --breathe 	   	will pulsate the light in a breathing pattern. Useful for debugging.
     --test-hsl=H,S,L	will set the light to the given HSL (for testing)
+    --turn-off		turn the light off, then exit.
 
 EOT
 }
@@ -50,6 +52,10 @@ my $Lights_URL = "http://$bridge_ip/api/$username/lights/$light/state";
 
 if ($opts{breathe}) {
     light_breathe();
+    exit 0;
+}
+elsif ($opts{'turn-off'}) {
+    turn_off_light();
     exit 0;
 }
 
@@ -285,7 +291,7 @@ sub show_color {
 }
 
 sub turn_off_light {
-    $UA->put( $Lights_URL => Content => JSON->new->encode({ on => 0 }) );
+    $UA->put( $Lights_URL => Content => JSON->new->encode({ on => JSON::false }) );
     reset_light();
 }
 
