@@ -118,6 +118,7 @@ sub Recyclight {
             last;
         }
     }
+    turn_off_light();
 }
 
 
