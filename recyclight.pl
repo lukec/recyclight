@@ -243,6 +243,12 @@ sub LoadEvents {
         die "Couldn't change feed URL to become events JSON endpoint: $url\n";
     }
 
+    my $now = DateTime->now;
+    my $after = $now->subtract(days => 2)->ymd;
+    my $before = $now->add(weeks => 2)->ymd;
+    $url .= "?after=$after&before=$before";
+    
+    print "Fetching: $url\n";
     # Now fetch the JSON content of upcoming events
     my $resp = $UA->get($url);
     unless ($resp->is_success) {
