@@ -188,6 +188,7 @@ sub alert_event_until {
 }
 
 sub light_breathe {
+    turn_on_light();
     reset_light();
     while (1) {
 	print "Breathing ...\n";
@@ -255,6 +256,7 @@ sub LoadEvents {
 # Turn the lights on in a simple boot sequence to know that the system is working
 # when this script runs.
 sub Show_boot_sequence {
+    turn_on_light();
     reset_light();
     my @colors = ("FF0000", "00FF00", "0000FF");
     for my $c (@colors) {
@@ -290,7 +292,13 @@ sub show_color {
     say $resp->status_line;
 }
 
+sub turn_on_light {
+    say "Turning on light";
+    $UA->put( $Lights_URL => Content => JSON->new->encode({ on => JSON::true }) );
+}
+
 sub turn_off_light {
+    say "Turning off light";
     $UA->put( $Lights_URL => Content => JSON->new->encode({ on => JSON::false }) );
     reset_light();
 }
