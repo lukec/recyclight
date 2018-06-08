@@ -134,6 +134,7 @@ sub alert_event_until {
     my $evt = shift;
     my $end_time = shift;
 
+    turn_on_light();
 
     # First, lets figure out what colors to show.  Usually ReCollect will
     # provide colors for each event flag.  It is possible to override these
@@ -276,6 +277,7 @@ sub Show_boot_sequence {
 	show_color($c);
 	sleep 2;
     }
+    turn_off_light();
 }
 
 sub show_color {
